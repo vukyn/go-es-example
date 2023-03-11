@@ -40,5 +40,4 @@ func main() {
 		panic(err)
 	}
 	common.SearchInventoryUseCase(es, "qc_fulfillment.qc_fulfillment_inventory.wms_inventory")
-	// common.SearchInventoryUseCase(es, "fulfillment.qc.cdc.final_product")
 }

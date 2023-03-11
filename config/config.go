@@ -9,7 +9,12 @@ import (
 
 func GetConfig() elasticsearch.Config {
 
-	cert, err := os.ReadFile("F:/Code/Golang/go-el/config/es-cert.crt")
+	const (
+		PC     = "F:/Code/golang/go-es-example/config/es-cert.crt"
+		LAPTOP = "F:/Code/Golang/go-el/config/es-cert.crt"
+	)
+
+	cert, err := os.ReadFile(PC)
 	if err != nil {
 		panic(err)
 	}

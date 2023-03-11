@@ -1,0 +1,22 @@
+{
+	"size": 0,
+	"query": {
+		"bool": {
+			"should": [
+				{
+					"match": {
+						"status_id": "6"
+					}
+				}
+			]
+		}
+	},
+	"aggs": {
+		"sku_count": {
+			"terms": {
+				"field": "sku.keyword",
+				"size": 1000
+			}
+		}
+	}
+}
