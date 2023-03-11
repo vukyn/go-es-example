@@ -1,0 +1,35 @@
+[
+	{
+		"size": 0,
+		"aggs": {
+			"in_stock_count": {
+				"multi_terms": {
+					"terms": [
+						{
+							"field": "sku.keyword"
+						},
+						{
+							"field": "status_id"
+						}
+					]
+				}
+			}
+		}
+	},
+	{
+		"size": 0,
+		"query": {
+			"match": {
+				"status_id": 6
+			}
+		},
+		"aggs": {
+			"sku_count": {
+				"terms": {
+					"field": "sku.keyword",
+					"size": 1000
+				}
+			}
+		}
+	}
+]
