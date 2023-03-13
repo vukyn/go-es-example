@@ -3,7 +3,6 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/elastic/go-elasticsearch/v7/esapi"
@@ -19,12 +18,18 @@ func PrettyPrint(v interface{}) (err error) {
 
 func WriteFile(text string) error {
 	data := []byte(text)
+	folderName := "data"
+	fileName := folderName + "/data.txt"
 
-	if err := os.Remove("data.txt"); err != nil {
-		return fmt.Errorf("error when delete file: %s", err.Error())
+	if _, err := os.Stat(folderName); err == nil {
+		os.Remove(fileName)
+	} else {
+		if err := os.Mkdir(folderName, os.ModePerm); err != nil {
+			return fmt.Errorf("error when make dir: %s", err.Error())
+		}
 	}
 
-	if err := ioutil.WriteFile("data.txt", data, 0); err != nil {
+	if err := os.WriteFile(fileName, data, 0); err != nil {
 		return fmt.Errorf("error when write file: %s", err.Error())
 	}
 

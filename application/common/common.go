@@ -30,25 +30,30 @@ func GetAllIndexes(es *elasticsearch.Client) (string, error) {
 func SearchInventoryUseCase(es *elasticsearch.Client, index string) ([]interface{}, error) {
 	checkExistIndex, err := es.Indices.Exists([]string{index})
 	if err != nil {
+		fmt.Printf("cannot check index existence: %s", err)
 		return nil, fmt.Errorf("cannot check index existence: %s", err)
 	}
 	if checkExistIndex.StatusCode == 404 {
+		fmt.Printf("not found index: %s", index)
 		return nil, fmt.Errorf("not found index: %s", index)
 	}
 
 	countSkuRepo, err := CountInventoryRepo(es, index)
 	if err != nil {
+		fmt.Printf("CountInventoryRepo.Err %s", err)
 		return nil, fmt.Errorf("CountInventoryRepo.Err %s", err)
 	}
 
 	byteCountSku, err := json.Marshal(&dto.ReportStockResponse{
-		Size: int64(len(countSkuRepo)),
+		Size:   int64(len(countSkuRepo)),
 		Record: countSkuRepo,
 	})
 	if err != nil {
+		fmt.Printf("Json.Marshal.Err %s", err)
 		return nil, fmt.Errorf("Json.Marshal.Err %s", err)
 	}
 	if err := utils.WriteFile(string(byteCountSku)); err != nil {
+		fmt.Printf("WriteFile.Err %s", err)
 		return nil, fmt.Errorf("WriteFile.Err %s", err)
 	}
 	return nil, nil
