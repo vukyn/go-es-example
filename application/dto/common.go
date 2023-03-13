@@ -17,24 +17,29 @@ type SkuCount struct {
 }
 
 type ReportStock struct {
-	SKU               string `json:"sku"`
-	Barcode           string `json:"barcode"`
-	Category          string `json:"category"`
-	BrandName         string `json:"brand_name"`
-	WarehouseName     string `json:"warehouse_name"`
-	Type              string `json:"type"`
-	ProductName       string `json:"product_name"`
-	InStock           int64  `json:"in_stock"`
-	Committed         int64  `json:"committed"`
-	Available         int64  `json:"available"`
-	InComming         int64  `json:"in_comming"`
-	Receving          int64  `json:"receving"`
-	PickOrder         int64  `json:"pick_order"`
-	PackOrder         int64  `json:"pack_order"`
-	PickIT            int64  `json:"pick_it"`
-	PackIT            int64  `json:"pack_it"`
-	Test              int64  `json:"test"`
-	UnsuitableProduct int64  `json:"unsuitable_product"`
+	SKU string `json:"sku"`
+	// Barcode           string `json:"barcode"`
+	// Category          string `json:"category"`
+	// BrandName         string `json:"brand_name"`
+	// WarehouseName     string `json:"warehouse_name"`
+	// Type              string `json:"type"`
+	// ProductName       string `json:"product_name"`
+	InStock   int64 `json:"in_stock"`
+	Committed int64 `json:"committed"`
+	// Available         int64  `json:"available"`
+	// InComming         int64  `json:"in_comming"`
+	// Receving          int64  `json:"receving"`
+	// PickOrder         int64  `json:"pick_order"`
+	// PackOrder         int64  `json:"pack_order"`
+	// PickIT            int64  `json:"pick_it"`
+	// PackIT            int64  `json:"pack_it"`
+	// Test              int64  `json:"test"`
+	// UnsuitableProduct int64  `json:"unsuitable_product"`
+}
+
+type ReportStockResponse struct {
+	Size   int64          `json:"size"`
+	Record []*ReportStock `json:"record"`
 }
 
 func FromElasticSearchResponseToReportStock(in []interface{}) []SkuCount {

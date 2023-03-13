@@ -3,6 +3,8 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 )
@@ -13,6 +15,21 @@ func PrettyPrint(v interface{}) (err error) {
 		fmt.Println(string(b))
 	}
 	return
+}
+
+func WriteFile(text string) error {
+	data := []byte(text)
+
+	if err := os.Remove("data.txt"); err != nil {
+		return fmt.Errorf("error when delete file: %s", err.Error())
+	}
+
+	if err := ioutil.WriteFile("data.txt", data, 0); err != nil {
+		return fmt.Errorf("error when write file: %s", err.Error())
+	}
+
+	fmt.Println("write file done!")
+	return nil
 }
 
 func GetAggregationResponse(esRes *esapi.Response, key string) []interface{} {

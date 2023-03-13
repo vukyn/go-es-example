@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"go_es_example/application/dto"
@@ -16,7 +17,7 @@ import (
 )
 
 var _ dto.SkuCount // For debugging; delete when done
-
+var _ json.Number  // For debugging; delete when done
 func GetAllIndexes(es *elasticsearch.Client) (string, error) {
 	res, err := esapi.CatIndicesRequest{Format: "json"}.Do(context.Background(), es)
 	if err != nil {
@@ -34,15 +35,26 @@ func SearchInventoryUseCase(es *elasticsearch.Client, index string) ([]interface
 	if checkExistIndex.StatusCode == 404 {
 		return nil, fmt.Errorf("not found index: %s", index)
 	}
+
 	countSkuRepo, err := CountInventoryRepo(es, index)
 	if err != nil {
 		return nil, fmt.Errorf("CountInventoryRepo.Err %s", err)
 	}
-	utils.PrettyPrint(countSkuRepo)
+
+	byteCountSku, err := json.Marshal(&dto.ReportStockResponse{
+		Size: int64(len(countSkuRepo)),
+		Record: countSkuRepo,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Json.Marshal.Err %s", err)
+	}
+	if err := utils.WriteFile(string(byteCountSku)); err != nil {
+		return nil, fmt.Errorf("WriteFile.Err %s", err)
+	}
 	return nil, nil
 }
 
-func CountInventoryRepo(es *elasticsearch.Client, index string) (*[]dto.ReportStock, error) {
+func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportStock, error) {
 	start := time.Now()
 	defer func() {
 		fmt.Println("Execution Time: ", time.Since(start))
@@ -51,7 +63,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) (*[]dto.ReportSt
 	keyInStock := "sku_count_in_stock"
 	keyCommitted := "sku_count_committed"
 	wg := sync.WaitGroup{}
-	reportStock := make([]dto.ReportStock, 0)
+	reportStock := make([]*dto.ReportStock, 0)
 
 	queryInStock, err := QueryInStock(keyInStock)
 	if err != nil {
@@ -74,7 +86,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) (*[]dto.ReportSt
 		defer resInStock.Body.Close()
 		countSkuInStock := dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resInStock, keyInStock))
 		for _, v := range countSkuInStock {
-			reportStock = append(reportStock, dto.ReportStock{
+			reportStock = append(reportStock, &dto.ReportStock{
 				SKU:     v.Sku,
 				InStock: int64(v.Count),
 			})
@@ -93,7 +105,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) (*[]dto.ReportSt
 		defer resCommitted.Body.Close()
 		countSkuCommitted := dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resCommitted, keyCommitted))
 		for _, v := range countSkuCommitted {
-			reportStock = append(reportStock, dto.ReportStock{
+			reportStock = append(reportStock, &dto.ReportStock{
 				SKU:       v.Sku,
 				Committed: int64(v.Count),
 			})
@@ -102,7 +114,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) (*[]dto.ReportSt
 	}(queryCommitted)
 
 	wg.Wait()
-	return &reportStock, nil
+	return reportStock, nil
 }
 
 func QueryInStock(key string) (*esquery.SearchRequest, error) {
