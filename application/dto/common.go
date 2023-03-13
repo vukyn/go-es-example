@@ -6,14 +6,10 @@ type EsIndice struct {
 	Index  string `json:"index"`
 }
 
-// type EsReponse struct {
-// 	Took int64                  `json:"took"`
-// 	Hits map[string]interface{} `json:"hits`
-// }
-
 type SkuCount struct {
-	Sku   string  `json:"sku"`
-	Count float64 `json:"count"`
+	Sku       string  `json:"sku"`
+	Count     float64 `json:"count"`
+	ProductId float64 `json:"product_id"`
 }
 
 type ReportStock struct {
@@ -43,13 +39,27 @@ type ReportStockResponse struct {
 	Record []*ReportStock `json:"record"`
 }
 
-func FromElasticSearchResponseToReportStock(in []interface{}) []*SkuCount {
+func FromElasticSearchResponseToSkuCount(in []interface{}) []*SkuCount {
 	res := make([]*SkuCount, 0)
 	for _, v := range in {
 		skuCount := v.(map[string]interface{})
 		res = append(res, &SkuCount{
 			Sku:   skuCount["key"].(string),
 			Count: skuCount["doc_count"].(float64),
+		})
+	}
+	return res
+}
+
+func FromElasticSearchResponseToSkuGetAll(in []interface{}) []*SkuCount {
+	res := make([]*SkuCount, 0)
+	for _, v := range in {
+		skuCount := v.(map[string]interface{})
+		productId := skuCount["product_id"].(map[string]interface{})["buckets"].([]interface{})[0].(map[string]interface{})["key"].(float64)
+		res = append(res, &SkuCount{
+			Sku:       skuCount["key"].(string),
+			Count:     skuCount["doc_count"].(float64),
+			ProductId: productId,
 		})
 	}
 	return res

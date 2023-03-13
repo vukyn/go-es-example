@@ -7,9 +7,19 @@ import (
 )
 
 const ES_QUERY_MAX_SIZE = 1000 // Reference: https://www.elastic.co/guide/en/app-search/7.17/limits.html
+const KEY_PRODUCT_ID = "product_id"
+const KEY_BRAND_ID = "brand_id"
+const KEY_WAREHOUSE_ID = "warehouse_id"
 
 func QueryAggAllSku(key string) (*esquery.SearchRequest, error) {
-	agg := esquery.TermsAgg(key, "sku.keyword").Size(ES_QUERY_MAX_SIZE)
+	agg := esquery.TermsAgg(key, "sku.keyword").
+		Aggs(esquery.
+			TermsAgg(KEY_PRODUCT_ID, KEY_PRODUCT_ID).
+			Aggs(esquery.
+				TermsAgg(KEY_BRAND_ID, KEY_BRAND_ID).
+				Aggs(esquery.
+					TermsAgg(KEY_WAREHOUSE_ID, KEY_WAREHOUSE_ID)))).
+		Size(ES_QUERY_MAX_SIZE)
 
 	query := esquery.Search().Aggs(agg).Size(0)
 	result, err := query.MarshalJSON()
