@@ -32,17 +32,19 @@ func GetAggregationResponse(esRes *esapi.Response, key string) []interface{} {
 		}
 	}
 
-	if err := json.NewDecoder(esRes.Body).Decode(&esRes); err != nil {
+	if err := json.NewDecoder(esRes.Body).Decode(&response); err != nil {
 		fmt.Printf("GetAggregationResponse: Error parsing the response body: %s", err)
 	} else {
 		fmt.Printf(
 			// Print the response status and information.
-			"[%s] %d hits; took: %dms\n",
+			"[%s] %s: %d hits; took: %dms\n",
 			esRes.Status(),
+			key,
 			int(response["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64)),
 			int(response["took"].(float64)),
 		)
 	}
 
+	// PrettyPrint(response)
 	return response["aggregations"].(map[string]interface{})[key].(map[string]interface{})["buckets"].([]interface{})
 }
