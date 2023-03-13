@@ -16,11 +16,11 @@ func Where[T any](list []T, f func(T) bool) []T {
 }
 
 // Find function find first element based on conditions.
-// Find return a pointer of new value.
+// Find return a new value T.
 //
 //	 Example:
-//		evens := Filter(list, func(i int) bool {return i % 2 == 0})
-func Find[T any](list []T, f func(T) bool) *T {
+//		evens := Find(list, func(i int) bool {return i % 2 == 0})
+func Find[T any](list []T, f func(T) bool) T {
 	var newValue T
 	for _, v := range list {
 		if f(v) {
@@ -28,5 +28,5 @@ func Find[T any](list []T, f func(T) bool) *T {
 			break
 		}
 	}
-	return &newValue
+	return newValue
 }
