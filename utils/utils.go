@@ -3,8 +3,8 @@ package utils
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-	"strconv"
+
+	"github.com/elastic/go-elasticsearch/v7/esapi"
 )
 
 func PrettyPrint(v interface{}) (err error) {
@@ -15,37 +15,34 @@ func PrettyPrint(v interface{}) (err error) {
 	return
 }
 
-func constructQuery(q string, size int) *strings.Reader {
+func GetAggregationResponse(esRes *esapi.Response, key string) []interface{} {
+	var response map[string]interface{}
 
-    // Build a query string from string passed to function
-    var query = `{"query": {`
+	if esRes.IsError() {
+		var e map[string]interface{}
+		if err := json.NewDecoder(esRes.Body).Decode(&e); err != nil {
+			fmt.Printf("GetAggregationResponse.IsError: Error parsing the response body: %s", err)
+		} else {
+			// Print the response status and error information.
+			fmt.Printf("[%s] %s: %s",
+				esRes.Status(),
+				e["error"].(map[string]interface{})["type"],
+				e["error"].(map[string]interface{})["reason"],
+			)
+		}
+	}
 
-    // Concatenate query string with string passed to method call
-    query = query + q
+	if err := json.NewDecoder(esRes.Body).Decode(&esRes); err != nil {
+		fmt.Printf("GetAggregationResponse: Error parsing the response body: %s", err)
+	} else {
+		fmt.Printf(
+			// Print the response status and information.
+			"[%s] %d hits; took: %dms\n",
+			esRes.Status(),
+			int(response["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64)),
+			int(response["took"].(float64)),
+		)
+	}
 
-    // Use the strconv.Itoa() method to convert int to string
-    query = query + `}, "size": ` + strconv.Itoa(size) + `}`
-    fmt.Println("\nquery:", query)
-
-    // Check for JSON errors
-    isValid := json.Valid([]byte(query)) // returns bool
-
-    // Default query is "{}" if JSON is invalid
-    if isValid == false {
-        fmt.Println("constructQuery() ERROR: query string not valid:", query)
-        fmt.Println("Using default match_all query")
-        query = "{}"
-    } else {
-        fmt.Println("constructQuery() valid JSON:", isValid)
-    }
-
-    // Build a new string from JSON query
-    var b strings.Builder
-    b.WriteString(query)
-
-    // Instantiate a *strings.Reader object from string
-    read := strings.NewReader(b.String())
-
-    // Return a *strings.Reader object
-    return read
+	return response["aggregations"].(map[string]interface{})[key].(map[string]interface{})["buckets"].([]interface{})
 }

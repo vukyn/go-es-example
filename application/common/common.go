@@ -2,18 +2,22 @@ package common
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-
-	// "go_es_example/application/dto"
 	"go_es_example/application/dto"
 	"go_es_example/utils"
+	"sync"
+	"time"
+
+	// "go_es_example/application/dto"
 
 	"github.com/aquasecurity/esquery"
 
 	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 )
+
+var _ dto.SkuCount // For debugging; delete when done
 
 func GetAllIndexes(es *elasticsearch.Client) (string, error) {
 	res, err := esapi.CatIndicesRequest{Format: "json"}.Do(context.Background(), es)
@@ -25,34 +29,29 @@ func GetAllIndexes(es *elasticsearch.Client) (string, error) {
 }
 
 func SearchInventoryUseCase(es *elasticsearch.Client, index string) ([]interface{}, error) {
-
-	resExist, err := es.Indices.Exists([]string{index})
+	checkExistIndex, err := es.Indices.Exists([]string{index})
 	if err != nil {
 		return nil, fmt.Errorf("cannot check index existence: %w", err)
 	}
-	if resExist.StatusCode == 404 {
+	if checkExistIndex.StatusCode == 404 {
 		return nil, fmt.Errorf("not found index: %s", index)
 	}
-	SearchInventoryRepo(es, index)
+	SearchInventoryTest(es, index)
 
 	return nil, nil
 }
 
-func SearchInventoryRepo(es *elasticsearch.Client, index string) ([]interface{}, error) {
+func SearchInventoryTest(es *elasticsearch.Client, index string) {
+	start := time.Now()
+	defer func() {
+		fmt.Println("Execution Time: ", time.Since(start))
+	}()
 
-	// query := esquery.
-	// 	Search().
-	// 	Query(
-	// 		esquery.
-	// 			Bool().
-	// 			Must(esquery.MatchAll()),
-	// 	).
-	// 	From(0).
-	// 	SourceIncludes("product")
-
-	query := QueryInStock()
-
-	var response map[string]interface{}
+	key := "sku_count"
+	query, err := QueryInStock(key)
+	if err != nil {
+		fmt.Printf("Error getting query in stock: %s", err)
+	}
 
 	resInventory, err := query.Run(es,
 		es.Search.WithContext(context.TODO()),
@@ -62,33 +61,9 @@ func SearchInventoryRepo(es *elasticsearch.Client, index string) ([]interface{},
 		fmt.Printf("Error getting response: %s", err)
 	}
 	defer resInventory.Body.Close()
+	utils.PrettyPrint(resInventory)
 
-	if resInventory.IsError() {
-		var e map[string]interface{}
-		if err := json.NewDecoder(resInventory.Body).Decode(&e); err != nil {
-			fmt.Printf("Error parsing the response body: %s", err)
-		} else {
-			// Print the response status and error information.
-			fmt.Printf("[%s] %s: %s",
-				resInventory.Status(),
-				e["error"].(map[string]interface{})["type"],
-				e["error"].(map[string]interface{})["reason"],
-			)
-		}
-	}
-
-	if err := json.NewDecoder(resInventory.Body).Decode(&response); err != nil {
-		fmt.Printf("Error parsing the response body: %s", err)
-	}
-
-	fmt.Printf(
-		"[%s] %d hits; took: %dms\n",
-		resInventory.Status(),
-		int(response["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64)),
-		int(response["took"].(float64)),
-	)
-
-	t := response["aggregations"].(map[string]interface{})["sku_count"].(map[string]interface{})["buckets"].([]interface{})
+	t := utils.GetAggregationResponse(resInventory, key)
 
 	resCountSku := make([]*dto.SkuCount, 0)
 
@@ -100,18 +75,83 @@ func SearchInventoryRepo(es *elasticsearch.Client, index string) ([]interface{},
 		})
 	}
 	utils.PrettyPrint(resCountSku)
-	// utils.PrettyPrint(t)
+}
 
-	// Print the ID and document source for each hit.
-	// for _, hit := range response["hits"].(map[string]interface{})["hits"].([]interface{}) {
-	// 	fmt.Printf(" * ID=%s, %s", hit.(map[string]interface{})["_id"], hit.(map[string]interface{})["_source"])
+func SearchInventoryRepo(es *elasticsearch.Client, index string) ([]interface{}, error) {
+	start := time.Now()
+	defer func() {
+		fmt.Println("Execution Time: ", time.Since(start))
+	}()
+
+	key := "sku_count"
+	wg := sync.WaitGroup{}
+	resCountSku := make([]*esapi.Response, 0)
+	queryInStock, err := QueryInStock(key)
+	if err != nil {
+		fmt.Printf("Error when query in-stock: %s", err)
+	}
+	queryCommitted, err := QueryCommitted(key)
+	if err != nil {
+		fmt.Printf("Error when query committed: %s", err)
+	}
+
+	wg.Add(2)
+
+	go func(query *esquery.SearchRequest) {
+		resInStock, err := query.Run(es,
+			es.Search.WithContext(context.TODO()),
+			es.Search.WithIndex(index),
+		)
+		utils.PrettyPrint(resInStock)
+		if err != nil {
+			fmt.Printf("Error getting response: %s", err)
+		}
+		defer resInStock.Body.Close()
+		resCountSku = append(resCountSku, resInStock)
+		wg.Done()
+	}(queryInStock)
+
+	go func(query *esquery.SearchRequest) {
+		resCommitted, err := queryCommitted.Run(es,
+			es.Search.WithContext(context.TODO()),
+			es.Search.WithIndex(index),
+		)
+		if err != nil {
+			fmt.Printf("Error getting response: %s", err)
+		}
+		defer resCommitted.Body.Close()
+		resCountSku = append(resCountSku, resCommitted)
+		wg.Done()
+	}(queryCommitted)
+
+	wg.Wait()
+
+	for _, res := range resCountSku {
+		for _, v := range utils.GetAggregationResponse(res, key) {
+			// skuCount := v.(map[string]interface{})
+			// resCountSku = append(resCountSku, &dto.SkuCount{
+			// 	Sku:   skuCount["key"].(string),
+			// 	Count: skuCount["doc_count"].(float64),
+			// })
+			// utils.PrettyPrint(v)
+			fmt.Println(v)
+		}
+	}
+	// for _, v := range t {
+	// 	skuCount := v.(map[string]interface{})
+	// 	resCountSku = append(resCountSku, &dto.SkuCount{
+	// 		Sku:   skuCount["key"].(string),
+	// 		Count: skuCount["doc_count"].(float64),
+	// 	})
 	// }
 
+	// utils.PrettyPrint(resCountSku)
+	// utils.PrettyPrint(t)
 	return nil, nil
 }
 
-func QueryInStock() *esquery.SearchRequest {
-	agg := esquery.TermsAgg("sku_count", "sku.keyword").Size(1000)
+func QueryInStock(key string) (*esquery.SearchRequest, error) {
+	agg := esquery.TermsAgg(key, "sku.keyword").Size(1000)
 
 	query := esquery.Search().
 		Query(
@@ -147,15 +187,15 @@ func QueryInStock() *esquery.SearchRequest {
 
 	result, err := query.MarshalJSON()
 	if err != nil {
-		fmt.Printf("Error parsing the query: %s", err)
+		return nil, errors.New(fmt.Sprintf("Error.Parsing: %s", err))
 	}
 	fmt.Printf("Query: %s\n", string(result))
 
-	return query
+	return query, nil
 }
 
-func QueryCommitted() *esquery.SearchRequest {
-	agg := esquery.TermsAgg("sku_count", "sku.keyword").Size(1000)
+func QueryCommitted(key string) (*esquery.SearchRequest, error) {
+	agg := esquery.TermsAgg(key, "sku.keyword").Size(1000)
 
 	query := esquery.Search().
 		Query(
@@ -171,11 +211,11 @@ func QueryCommitted() *esquery.SearchRequest {
 
 	result, err := query.MarshalJSON()
 	if err != nil {
-		fmt.Printf("Error parsing the query: %s", err)
+		return nil, errors.New(fmt.Sprintf("Error.Parsing: %s", err))
 	}
 	fmt.Printf("Query: %s\n", string(result))
 
-	return query
+	return query, nil
 }
 
 // func BuildQueryCountSku([]*int status_id) *esquery.SearchRequest {

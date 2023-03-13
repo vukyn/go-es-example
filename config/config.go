@@ -14,7 +14,7 @@ func GetConfig() elasticsearch.Config {
 		LAPTOP = "F:/Code/Golang/go-el/config/es-cert.crt"
 	)
 
-	cert, err := os.ReadFile(PC)
+	cert, err := os.ReadFile(LAPTOP)
 	if err != nil {
 		panic(err)
 	}
