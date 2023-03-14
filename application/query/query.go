@@ -31,7 +31,9 @@ func QueryAggAllSku(key string) (*esquery.SearchRequest, error) {
 }
 
 func QueryAggInStock(key string) (*esquery.SearchRequest, error) {
-	agg := esquery.TermsAgg(key, "sku.keyword").Size(ES_QUERY_MAX_SIZE)
+	agg := esquery.TermsAgg(key, "sku.keyword").
+		Aggs(esquery.TermsAgg(KEY_WAREHOUSE_ID, KEY_WAREHOUSE_ID)).
+		Size(ES_QUERY_MAX_SIZE)
 
 	query := esquery.Search().
 		Query(
@@ -75,7 +77,9 @@ func QueryAggInStock(key string) (*esquery.SearchRequest, error) {
 }
 
 func QueryAggCommitted(key string) (*esquery.SearchRequest, error) {
-	agg := esquery.TermsAgg(key, "sku.keyword").Size(ES_QUERY_MAX_SIZE)
+	agg := esquery.TermsAgg(key, "sku.keyword").
+		Aggs(esquery.TermsAgg(KEY_WAREHOUSE_ID, KEY_WAREHOUSE_ID)).
+		Size(ES_QUERY_MAX_SIZE)
 
 	query := esquery.Search().
 		Query(
@@ -99,7 +103,9 @@ func QueryAggCommitted(key string) (*esquery.SearchRequest, error) {
 }
 
 func QueryAggReceiving(key string) (*esquery.SearchRequest, error) {
-	agg := esquery.TermsAgg(key, "sku.keyword").Size(ES_QUERY_MAX_SIZE)
+	agg := esquery.TermsAgg(key, "sku.keyword").
+		Aggs(esquery.TermsAgg(KEY_WAREHOUSE_ID, KEY_WAREHOUSE_ID)).
+		Size(ES_QUERY_MAX_SIZE)
 
 	query := esquery.Search().
 		Query(

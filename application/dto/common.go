@@ -1,5 +1,9 @@
 package dto
 
+import (
+	_ "go_es_example/utils"
+)
+
 type EsIndice struct {
 	Health string `json:"health"`
 	Status string `json:"status"`
@@ -7,16 +11,20 @@ type EsIndice struct {
 }
 
 type SkuCount struct {
-	Sku       string  `json:"sku"`
-	Count     float64 `json:"count"`
-	ProductId float64 `json:"product_id"`
+	Sku         string  `json:"sku"`
+	Count       float64 `json:"count"`
+	ProductId   float64 `json:"product_id"`
+	WarehouseId float64 `json:"warehouse_id"`
+	BrandId     float64 `json:"brand_id"`
 }
 
 type ReportStock struct {
 	Sku string `json:"sku"`
 	// Barcode           string `json:"barcode"`
 	// Category          string `json:"category"`
-	// BrandName         string `json:"brand_name"`
+	BrandId int64 `json:"brand_id"`
+	// BrandName string `json:"brand_name"`
+	WarehouseId int64 `json:"warehouse_id"`
 	// WarehouseName     string `json:"warehouse_name"`
 	// Type              string `json:"type"`
 	ProductId int64 `json:"product_id"`
@@ -42,11 +50,15 @@ type ReportStockResponse struct {
 func FromElasticSearchResponseToSkuCount(in []interface{}) []*SkuCount {
 	res := make([]*SkuCount, 0)
 	for _, v := range in {
-		skuCount := v.(map[string]interface{})
-		res = append(res, &SkuCount{
-			Sku:   skuCount["key"].(string),
-			Count: skuCount["doc_count"].(float64),
-		})
+		sku := v.(map[string]interface{})
+		skuCount := v.(map[string]interface{})["warehouse_id"].(map[string]interface{})["buckets"].([]interface{})
+		for _, k := range skuCount {
+			res = append(res, &SkuCount{
+				Sku:         sku["key"].(string),
+				Count:       k.(map[string]interface{})["doc_count"].(float64),
+				WarehouseId: k.(map[string]interface{})["key"].(float64),
+			})
+		}
 	}
 	return res
 }
@@ -54,13 +66,37 @@ func FromElasticSearchResponseToSkuCount(in []interface{}) []*SkuCount {
 func FromElasticSearchResponseToSkuGetAll(in []interface{}) []*SkuCount {
 	res := make([]*SkuCount, 0)
 	for _, v := range in {
-		skuCount := v.(map[string]interface{})
-		productId := skuCount["product_id"].(map[string]interface{})["buckets"].([]interface{})[0].(map[string]interface{})["key"].(float64)
-		res = append(res, &SkuCount{
-			Sku:       skuCount["key"].(string),
-			Count:     skuCount["doc_count"].(float64),
-			ProductId: productId,
-		})
+
+		var skuCount SkuCount
+		sku := v.(map[string]interface{})
+
+		// Get product_id from buckets
+		product := sku["product_id"].(map[string]interface{})["buckets"].([]interface{})
+		if len(product) > 0 {
+			skuCount.ProductId = product[0].(map[string]interface{})["key"].(float64)
+		}
+
+		// Get brand_id from buckets
+		brand := product[0].(map[string]interface{})["brand_id"].(map[string]interface{})["buckets"].([]interface{})
+		if len(brand) > 0 {
+			skuCount.BrandId = brand[0].(map[string]interface{})["key"].(float64)
+
+			// Get warehouse_id from buckets
+			warehouse := brand[0].(map[string]interface{})["warehouse_id"].(map[string]interface{})["buckets"].([]interface{})
+			for _, w := range warehouse {
+				res = append(res, &SkuCount{
+					Sku:         sku["key"].(string),
+					ProductId:   skuCount.ProductId,
+					BrandId:     skuCount.BrandId,
+					WarehouseId: w.(map[string]interface{})["key"].(float64),
+				})
+			}
+		} else {
+			res = append(res, &SkuCount{
+				Sku:       sku["key"].(string),
+				ProductId: skuCount.ProductId,
+			})
+		}
 	}
 	return res
 }

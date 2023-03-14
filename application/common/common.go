@@ -86,8 +86,10 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 		listSku := dto.FromElasticSearchResponseToSkuGetAll(utils.GetAggregationResponse(res, keyAllSku))
 		for _, v := range listSku {
 			reportStock = append(reportStock, &dto.ReportStock{
-				Sku: v.Sku,
-				ProductId: int64(v.ProductId),
+				Sku:         v.Sku,
+				ProductId:   int64(v.ProductId),
+				BrandId:     int64(v.BrandId),
+				WarehouseId: int64(v.WarehouseId),
 			})
 		}
 		wg.Done()
@@ -155,21 +157,21 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 	// Merge data from everywhere to a single list
 	for i, v := range reportStock {
 		inStockItem := utils.Find(countSkuInStock, func(i *dto.SkuCount) bool {
-			return v.Sku == i.Sku
+			return v.Sku == i.Sku && v.WarehouseId == int64(i.WarehouseId)
 		})
 		if inStockItem != nil {
 			reportStock[i].InStock = int64(inStockItem.Count)
 		}
 
 		committedItem := utils.Find(countSkuCommitted, func(i *dto.SkuCount) bool {
-			return v.Sku == i.Sku
+			return v.Sku == i.Sku && v.WarehouseId == int64(i.WarehouseId)
 		})
 		if committedItem != nil {
 			reportStock[i].Committed = int64(committedItem.Count)
 		}
 
 		receivingItem := utils.Find(countSkuReceiving, func(i *dto.SkuCount) bool {
-			return v.Sku == i.Sku
+			return v.Sku == i.Sku && v.WarehouseId == int64(i.WarehouseId)
 		})
 		if receivingItem != nil {
 			reportStock[i].Receving = int64(receivingItem.Count)
