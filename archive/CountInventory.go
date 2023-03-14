@@ -41,7 +41,7 @@ func CountInventoryRepoV1(es *elasticsearch.Client, index string) ([]*dto.Report
 		fmt.Printf("Error getting response: %s", err)
 	}
 	defer resAllSku.Body.Close()
-	listSku := dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resAllSku, keyAllSku))
+	listSku := dto.FromElasticSearchResponseToSkuGetAll(utils.GetAggregationResponse(resAllSku, keyAllSku))
 	for _, v := range listSku {
 		reportStock = append(reportStock, &dto.ReportStock{
 			Sku: v.Sku,
@@ -61,7 +61,7 @@ func CountInventoryRepoV1(es *elasticsearch.Client, index string) ([]*dto.Report
 		fmt.Printf("Error getting response: %s", err)
 	}
 	defer resInStock.Body.Close()
-	countSkuInStock = dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resInStock, keyInStock))
+	countSkuInStock = dto.FromElasticSearchResponseToSkuCount(utils.GetAggregationResponse(resInStock, keyInStock))
 	for _, v := range countSkuInStock {
 		for i, y := range reportStock {
 			if y.Sku == v.Sku {
@@ -84,7 +84,7 @@ func CountInventoryRepoV1(es *elasticsearch.Client, index string) ([]*dto.Report
 		fmt.Printf("Error getting response: %s", err)
 	}
 	defer resCommitted.Body.Close()
-	countSkuCommitted = dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resCommitted, keyCommitted))
+	countSkuCommitted = dto.FromElasticSearchResponseToSkuCount(utils.GetAggregationResponse(resCommitted, keyCommitted))
 	for _, v := range countSkuCommitted {
 		for i, y := range reportStock {
 			if y.Sku == v.Sku {
@@ -127,7 +127,7 @@ func CountInventoryRepoV2(es *elasticsearch.Client, index string) ([]*dto.Report
 			fmt.Printf("Error getting response: %s", err)
 		}
 		defer resAllSku.Body.Close()
-		listSku := dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resAllSku, keyAllSku))
+		listSku := dto.FromElasticSearchResponseToSkuGetAll(utils.GetAggregationResponse(resAllSku, keyAllSku))
 		for _, v := range listSku {
 			reportStock = append(reportStock, &dto.ReportStock{
 				Sku: v.Sku,
@@ -153,7 +153,7 @@ func CountInventoryRepoV2(es *elasticsearch.Client, index string) ([]*dto.Report
 			fmt.Printf("Error getting response: %s", err)
 		}
 		defer resInStock.Body.Close()
-		countSkuInStock = dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resInStock, keyInStock))
+		countSkuInStock = dto.FromElasticSearchResponseToSkuCount(utils.GetAggregationResponse(resInStock, keyInStock))
 		for _, v := range countSkuInStock {
 			for i, y := range reportStock {
 				if y.Sku == v.Sku {
@@ -179,7 +179,7 @@ func CountInventoryRepoV2(es *elasticsearch.Client, index string) ([]*dto.Report
 			fmt.Printf("Error getting response: %s", err)
 		}
 		defer resCommitted.Body.Close()
-		countSkuCommitted = dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resCommitted, keyCommitted))
+		countSkuCommitted = dto.FromElasticSearchResponseToSkuCount(utils.GetAggregationResponse(resCommitted, keyCommitted))
 		for _, v := range countSkuCommitted {
 			for i, y := range reportStock {
 				if y.Sku == v.Sku {
@@ -226,7 +226,7 @@ func CountInventoryRepoV3(es *elasticsearch.Client, index string) ([]*dto.Report
 			fmt.Printf("Error getting response: %s", err)
 		}
 		defer resAllSku.Body.Close()
-		listSku := dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resAllSku, keyAllSku))
+		listSku := dto.FromElasticSearchResponseToSkuGetAll(utils.GetAggregationResponse(resAllSku, keyAllSku))
 		for _, v := range listSku {
 			reportStock = append(reportStock, &dto.ReportStock{
 				Sku: v.Sku,
@@ -252,7 +252,7 @@ func CountInventoryRepoV3(es *elasticsearch.Client, index string) ([]*dto.Report
 			fmt.Printf("Error getting response: %s", err)
 		}
 		defer resInStock.Body.Close()
-		countSkuInStock = dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resInStock, keyInStock))
+		countSkuInStock = dto.FromElasticSearchResponseToSkuCount(utils.GetAggregationResponse(resInStock, keyInStock))
 		wg.Done()
 	}()
 
@@ -270,7 +270,7 @@ func CountInventoryRepoV3(es *elasticsearch.Client, index string) ([]*dto.Report
 			fmt.Printf("Error getting response: %s", err)
 		}
 		defer resCommitted.Body.Close()
-		countSkuCommitted = dto.FromElasticSearchResponseToReportStock(utils.GetAggregationResponse(resCommitted, keyCommitted))
+		countSkuCommitted = dto.FromElasticSearchResponseToSkuCount(utils.GetAggregationResponse(resCommitted, keyCommitted))
 		wg.Done()
 	}()
 

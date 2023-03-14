@@ -12,9 +12,10 @@ func GetConfig() elasticsearch.Config {
 	const (
 		PC     = "F:/Code/golang/go-es-example/config/es-cert.crt"
 		LAPTOP = "F:/Code/Golang/go-el/config/es-cert.crt"
+		TEMP   = "C:/Users/Vu Ky/Desktop/go-es-example/config/es-cert.crt"
 	)
 
-	cert, err := os.ReadFile(PC)
+	cert, err := os.ReadFile(TEMP)
 	if err != nil {
 		panic(err)
 	}
