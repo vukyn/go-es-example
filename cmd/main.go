@@ -39,5 +39,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	common.SearchInventoryUseCase(es, "qc_fulfillment.qc_fulfillment_inventory.wms_inventory")
+	common.ReportStockUseCase(es)
 }

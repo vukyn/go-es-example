@@ -19,7 +19,7 @@ func Where[T any](list []T, f func(T) bool) []T {
 // Find return a new value T.
 //
 //	 Example:
-//		evens := Find(list, func(i int) bool {return i % 2 == 0})
+//		item := Find(list, func(n name) bool {return n == "ABC"})
 func Find[T any](list []T, f func(T) bool) T {
 	var newValue T
 	for _, v := range list {
@@ -29,4 +29,21 @@ func Find[T any](list []T, f func(T) bool) T {
 		}
 	}
 	return newValue
+}
+
+// Distinct function remove duplicates from slice.
+// Distinct return a new slice.
+//
+//	 Example:
+//		newList := Distinct(oldList)
+func Distinct[T string | int | float64](list []T) []T {
+	allKeys := make(map[T]bool)
+	newList := []T{}
+	for _, item := range list {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			newList = append(newList, item)
+		}
+	}
+	return newList
 }

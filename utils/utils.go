@@ -16,24 +16,24 @@ func PrettyPrint(v interface{}) (err error) {
 	return
 }
 
-func WriteFile(text string) error {
+func WriteFile(text string, filename string) error {
 	data := []byte(text)
-	folderName := "data"
-	fileName := folderName + "/data.txt"
+	folderName := "data/"
+	filename = folderName + filename + ".txt"
 
 	if _, err := os.Stat(folderName); err == nil {
-		os.Remove(fileName)
+		os.Remove(filename)
 	} else {
 		if err := os.Mkdir(folderName, os.ModePerm); err != nil {
 			return fmt.Errorf("error when make dir: %s", err.Error())
 		}
 	}
 
-	if err := os.WriteFile(fileName, data, 0); err != nil {
+	if err := os.WriteFile(filename, data, 0); err != nil {
 		return fmt.Errorf("error when write file: %s", err.Error())
 	}
 
-	fmt.Println("write file done!")
+	fmt.Printf("write file \"%s\" done!\n", filename)
 	return nil
 }
 
@@ -69,4 +69,37 @@ func GetAggregationResponse(esRes *esapi.Response, key string) []interface{} {
 
 	// PrettyPrint(response)
 	return response["aggregations"].(map[string]interface{})[key].(map[string]interface{})["buckets"].([]interface{})
+}
+
+func GetHitsResponse(esRes *esapi.Response) []interface{} {
+	var response map[string]interface{}
+
+	if esRes.IsError() {
+		var e map[string]interface{}
+		if err := json.NewDecoder(esRes.Body).Decode(&e); err != nil {
+			fmt.Printf("GetHitsResponse.IsError: Error parsing the response body: %s", err)
+		} else {
+			// Print the response status and error information.
+			fmt.Printf("[%s] %s: %s",
+				esRes.Status(),
+				e["error"].(map[string]interface{})["type"],
+				e["error"].(map[string]interface{})["reason"],
+			)
+		}
+	}
+
+	if err := json.NewDecoder(esRes.Body).Decode(&response); err != nil {
+		fmt.Printf("GetHitsResponse: Error parsing the response body: %s", err)
+	} else {
+		fmt.Printf(
+			// Print the response status and information.
+			"[%s] %d hits; took: %dms\n",
+			esRes.Status(),
+			int(response["hits"].(map[string]interface{})["total"].(map[string]interface{})["value"].(float64)),
+			int(response["took"].(float64)),
+		)
+	}
+
+	// PrettyPrint(response)
+	return response["hits"].(map[string]interface{})["hits"].([]interface{})
 }

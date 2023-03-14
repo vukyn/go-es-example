@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go_es_example/application/constant"
 	"go_es_example/application/dto"
 	"go_es_example/application/query"
 	"go_es_example/utils"
@@ -26,36 +27,69 @@ func GetAllIndexes(es *elasticsearch.Client) (string, error) {
 	return res.String(), nil
 }
 
-func SearchInventoryUseCase(es *elasticsearch.Client, index string) {
-	checkExistIndex, err := es.Indices.Exists([]string{index})
+func ReportStockUseCase(es *elasticsearch.Client) {
+	indexInventory := "qc_fulfillment.qc_fulfillment_inventory.wms_inventory"
+	indexProduct := "fulfillment.qc.cdc.final_product_v2"
+
+	// Check exist index
+	checkExistIndex, err := es.Indices.Exists([]string{indexInventory, indexProduct})
 	if err != nil {
 		fmt.Printf("cannot check index existence: %s", err)
 	}
 	if checkExistIndex.StatusCode == 404 {
-		fmt.Printf("not found index: %s", index)
+		fmt.Printf("not found index: %s", checkExistIndex.Body)
 	}
 
-	countSkuRepo, err := CountInventoryRepo(es, index)
+	// Query report get count
+	reportStock, err := ReportStockRepo(es, indexInventory)
 	if err != nil {
 		fmt.Printf("CountInventoryRepo.Err %s", err)
 	}
 
+	// Mapping product information
+	listSku := make([]float64, 0)
+	for _, v := range reportStock {
+		listSku = append(listSku, v.Sku)
+	}
+	listProduct, err := GetListProductRepo(es, indexProduct, utils.Distinct(listSku))
+	if err != nil {
+		fmt.Printf("GetListProductRepo.Err %s", err)
+	}
+	byteListProduct, err := json.Marshal(listProduct)
+	if err != nil {
+		fmt.Printf("Json.Marshal.Err %s", err)
+	}
+	if err := utils.WriteFile(string(byteListProduct), "data_list_product"); err != nil {
+		fmt.Printf("WriteFile.Err %s", err)
+	}
+
+	for i, v := range reportStock {
+		product := utils.Find(listProduct, func(i *dto.Product) bool {
+			return v.Sku == i.Sku
+		})
+		if product != nil {
+			reportStock[i].ProductName = product.ProductName
+			reportStock[i].Barcode = product.Barcode
+			reportStock[i].Type = int32(product.Type)
+		}
+	}
+
 	byteCountSku, err := json.Marshal(&dto.ReportStockResponse{
-		Size:   int64(len(countSkuRepo)),
-		Record: countSkuRepo,
+		Size:   int64(len(reportStock)),
+		Record: reportStock,
 	})
 	if err != nil {
 		fmt.Printf("Json.Marshal.Err %s", err)
 	}
-	if err := utils.WriteFile(string(byteCountSku)); err != nil {
+	if err := utils.WriteFile(string(byteCountSku), "data_count_sku"); err != nil {
 		fmt.Printf("WriteFile.Err %s", err)
 	}
 }
 
-func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportStock, error) {
+func ReportStockRepo(es *elasticsearch.Client, index string) ([]*dto.ReportStock, error) {
 	start := time.Now()
 	defer func() {
-		fmt.Println("Execution Time: ", time.Since(start))
+		fmt.Println("Execution Time CountSku: ", time.Since(start))
 	}()
 
 	keyAllSku := "sku_count_all"
@@ -71,7 +105,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 	wg.Add(1)
 	// Query all SKU
 	go func() {
-		query, err := query.QueryAggAllSku(keyAllSku)
+		query, err := query.QueryAggSku(keyAllSku, false, nil, nil)
 		if err != nil {
 			fmt.Printf("Error when query all sku: %s", err)
 		}
@@ -83,12 +117,10 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 			fmt.Printf("Error getting response: %s", err)
 		}
 		defer res.Body.Close()
-		listSku := dto.FromElasticSearchResponseToSkuGetAll(utils.GetAggregationResponse(res, keyAllSku))
+		listSku := dto.FromElasticSearchResponseToSkuCount(utils.GetAggregationResponse(res, keyAllSku))
 		for _, v := range listSku {
 			reportStock = append(reportStock, &dto.ReportStock{
 				Sku:         v.Sku,
-				ProductId:   int64(v.ProductId),
-				BrandId:     int64(v.BrandId),
 				WarehouseId: int64(v.WarehouseId),
 			})
 		}
@@ -100,7 +132,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 	wg.Add(3)
 	// Query In-stock
 	go func() {
-		query, err := query.QueryAggInStock(keyInStock)
+		query, err := query.QueryAggSku(keyInStock, false, constant.SKU_STATUS_IN_STOCK, nil)
 		if err != nil {
 			fmt.Printf("Error when query in-stock: %s", err)
 		}
@@ -118,7 +150,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 
 	// Query Committed
 	go func() {
-		query, err := query.QueryAggCommitted(keyCommitted)
+		query, err := query.QueryAggSku(keyCommitted, false, constant.SKU_STATUS_COMMITTED, nil)
 		if err != nil {
 			fmt.Printf("Error when query committed: %s", err)
 		}
@@ -136,7 +168,7 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 
 	// Query Receiving
 	go func() {
-		query, err := query.QueryAggReceiving(keyReceiving)
+		query, err := query.QueryAggSku(keyReceiving, false, constant.SKU_STATUS_RECEIVING, nil)
 		if err != nil {
 			fmt.Printf("Error when query receving: %s", err)
 		}
@@ -179,4 +211,26 @@ func CountInventoryRepo(es *elasticsearch.Client, index string) ([]*dto.ReportSt
 	}
 
 	return reportStock, nil
+}
+
+func GetListProductRepo(es *elasticsearch.Client, index string, skus []float64) ([]*dto.Product, error) {
+	start := time.Now()
+	defer func() {
+		fmt.Println("Execution Time GetListProduct: ", time.Since(start))
+	}()
+
+	query, err := query.QueryListProduct(skus, false)
+	if err != nil {
+		fmt.Printf("Error when query list product: %s", err)
+	}
+	res, err := query.Run(es,
+		es.Search.WithContext(context.TODO()),
+		es.Search.WithIndex(index),
+	)
+	if err != nil {
+		fmt.Printf("Error getting response: %s", err)
+	}
+	defer res.Body.Close()
+
+	return dto.FromElasticSearchResponseToListProduct(utils.GetHitsResponse(res)), nil
 }

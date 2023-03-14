@@ -2,6 +2,7 @@ package dto
 
 import (
 	_ "go_es_example/utils"
+	"strconv"
 )
 
 type EsIndice struct {
@@ -11,26 +12,33 @@ type EsIndice struct {
 }
 
 type SkuCount struct {
-	Sku         string  `json:"sku"`
+	Sku         float64 `json:"sku"`
 	Count       float64 `json:"count"`
 	ProductId   float64 `json:"product_id"`
 	WarehouseId float64 `json:"warehouse_id"`
 	BrandId     float64 `json:"brand_id"`
 }
 
+type Product struct {
+	Sku         float64 `json:"sku"`
+	Barcode     string  `json:"barcode"`
+	Type        float64 `json:"type"`
+	ProductName string  `json:"product_name"`
+}
+
 type ReportStock struct {
-	Sku string `json:"sku"`
-	// Barcode           string `json:"barcode"`
+	Sku     float64 `json:"sku"`
+	Barcode string  `json:"barcode"`
 	// Category          string `json:"category"`
-	BrandId int64 `json:"brand_id"`
+	// BrandId int64 `json:"brand_id"`
 	// BrandName string `json:"brand_name"`
 	WarehouseId int64 `json:"warehouse_id"`
 	// WarehouseName     string `json:"warehouse_name"`
-	// Type              string `json:"type"`
-	ProductId int64 `json:"product_id"`
-	// ProductName       string `json:"product_name"`
-	InStock   int64 `json:"in_stock"`
-	Committed int64 `json:"committed"`
+	Type int32 `json:"type"`
+	// ProductId int64 `json:"product_id"`
+	ProductName string `json:"product_name"`
+	InStock     int64  `json:"in_stock"`
+	Committed   int64  `json:"committed"`
 	// Available         int64  `json:"available"`
 	// InComming         int64  `json:"in_comming"`
 	Receving int64 `json:"receving"`
@@ -51,52 +59,29 @@ func FromElasticSearchResponseToSkuCount(in []interface{}) []*SkuCount {
 	res := make([]*SkuCount, 0)
 	for _, v := range in {
 		sku := v.(map[string]interface{})
-		skuCount := v.(map[string]interface{})["warehouse_id"].(map[string]interface{})["buckets"].([]interface{})
-		for _, k := range skuCount {
+		warehouse := v.(map[string]interface{})["warehouse_id"].(map[string]interface{})["buckets"].([]interface{})
+		for _, w := range warehouse {
+			skuF, _ := strconv.ParseFloat(sku["key"].(string), 64)
 			res = append(res, &SkuCount{
-				Sku:         sku["key"].(string),
-				Count:       k.(map[string]interface{})["doc_count"].(float64),
-				WarehouseId: k.(map[string]interface{})["key"].(float64),
+				Sku:         skuF,
+				Count:       w.(map[string]interface{})["doc_count"].(float64),
+				WarehouseId: w.(map[string]interface{})["key"].(float64),
 			})
 		}
 	}
 	return res
 }
 
-func FromElasticSearchResponseToSkuGetAll(in []interface{}) []*SkuCount {
-	res := make([]*SkuCount, 0)
+func FromElasticSearchResponseToListProduct(in []interface{}) []*Product {
+	res := make([]*Product, 0)
 	for _, v := range in {
-
-		var skuCount SkuCount
-		sku := v.(map[string]interface{})
-
-		// Get product_id from buckets
-		product := sku["product_id"].(map[string]interface{})["buckets"].([]interface{})
-		if len(product) > 0 {
-			skuCount.ProductId = product[0].(map[string]interface{})["key"].(float64)
-		}
-
-		// Get brand_id from buckets
-		brand := product[0].(map[string]interface{})["brand_id"].(map[string]interface{})["buckets"].([]interface{})
-		if len(brand) > 0 {
-			skuCount.BrandId = brand[0].(map[string]interface{})["key"].(float64)
-
-			// Get warehouse_id from buckets
-			warehouse := brand[0].(map[string]interface{})["warehouse_id"].(map[string]interface{})["buckets"].([]interface{})
-			for _, w := range warehouse {
-				res = append(res, &SkuCount{
-					Sku:         sku["key"].(string),
-					ProductId:   skuCount.ProductId,
-					BrandId:     skuCount.BrandId,
-					WarehouseId: w.(map[string]interface{})["key"].(float64),
-				})
-			}
-		} else {
-			res = append(res, &SkuCount{
-				Sku:       sku["key"].(string),
-				ProductId: skuCount.ProductId,
-			})
-		}
+		product := v.(map[string]interface{})["_source"].(map[string]interface{})["product"].(map[string]interface{})
+		res = append(res, &Product{
+			Sku:         product["product_sku"].(float64),
+			Barcode:     product["product_barcode"].(string),
+			Type:        product["product_type"].(float64),
+			ProductName: product["product_name"].(string),
+		})
 	}
 	return res
 }

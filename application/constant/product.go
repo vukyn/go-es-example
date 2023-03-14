@@ -1,0 +1,15 @@
+package constant
+
+const (
+	PRODUCT_TYPE_NORMAL int32 = iota + 1
+	PRODUCT_TYPE_COMBO
+	PRODUCT_TYPE_MATERIAL
+	PRODUCT_TYPE_GIFT
+	PRODUCT_TYPE_SPA
+)
+
+var (
+	SKU_STATUS_IN_STOCK  = []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 20, 21, 22, 23, 26, 27, 28, 29, 30, 33}
+	SKU_STATUS_COMMITTED = []int{7, 9, 11, 12}
+	SKU_STATUS_RECEIVING = []int{2, 26, 33}
+)
