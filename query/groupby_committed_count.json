@@ -1,37 +1,19 @@
 {
-	"size": 0,
+	"aggs": {
+		"sku_count_committed": {
+			"aggs": { "warehouse_id": { "terms": { "field": "warehouse_id" } } },
+			"terms": { "field": "sku.keyword", "size": 1000 }
+		}
+	},
 	"query": {
 		"bool": {
 			"should": [
-				{
-					"match": {
-						"status_id": "7"
-					}
-				},
-				{
-					"match": {
-						"status_id": "9"
-					}
-				},
-				{
-					"match": {
-						"status_id": "11"
-					}
-				},
-				{
-					"match": {
-						"status_id": "12"
-					}
-				}
+				{ "match": { "status_id": { "query": 7 } } },
+				{ "match": { "status_id": { "query": 9 } } },
+				{ "match": { "status_id": { "query": 11 } } },
+				{ "match": { "status_id": { "query": 12 } } }
 			]
 		}
 	},
-	"aggs": {
-		"sku_count": {
-			"terms": {
-				"field": "sku.keyword",
-				"size": 1000
-			}
-		}
-	}
+	"size": 0
 }

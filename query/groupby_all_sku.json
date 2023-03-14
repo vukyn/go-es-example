@@ -1,0 +1,19 @@
+{
+	"aggs": {
+		"sku_count_all": {
+			"aggs": {
+				"product_id": {
+					"aggs": {
+						"brand_id": {
+							"aggs": { "warehouse_id": { "terms": { "field": "warehouse_id" } } },
+							"terms": { "field": "brand_id" }
+						}
+					},
+					"terms": { "field": "product_id" }
+				}
+			},
+			"terms": { "field": "sku.keyword", "size": 1000 }
+		}
+	},
+	"size": 0
+}
