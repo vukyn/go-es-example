@@ -4,36 +4,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/elastic/go-elasticsearch/v7/esapi"
 )
 
 func PrettyPrint(v interface{}) (err error) {
 	b, err := json.MarshalIndent(v, "", "  ")
-	if err == nil {
-		fmt.Println(string(b))
+	if err != nil {
+		return err
 	}
-	return
+	fmt.Println(string(b))
+	return nil
 }
 
-func WriteFile(text string, filename string) error {
-	data := []byte(text)
-	folderName := "data/"
-	filename = folderName + filename + ".txt"
 
-	if _, err := os.Stat(folderName); err == nil {
-		os.Remove(filename)
+// Write text to a file.
+// Create if not exist, or overwrite the existing file.
+//
+// Example:
+//
+//	WriteFile("Hello World", "temp/output.txt")
+func WriteFile(input string, filePath string) error {
+	data := []byte(input)
+	dir, _ := filepath.Split(filePath)
+
+	if _, err := os.Stat(dir); err == nil {
+		os.Remove(filePath)
 	} else {
-		if err := os.Mkdir(folderName, os.ModePerm); err != nil {
-			return fmt.Errorf("error when make dir: %s", err.Error())
+		if err := os.Mkdir(dir, os.ModePerm); err != nil {
+			return err
 		}
 	}
-
-	if err := os.WriteFile(filename, data, 0); err != nil {
-		return fmt.Errorf("error when write file: %s", err.Error())
+	if err := os.WriteFile(filePath, data, 0); err != nil {
+		return err
 	}
-
-	fmt.Printf("write file \"%s\" done!\n", filename)
 	return nil
 }
 

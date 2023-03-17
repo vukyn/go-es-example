@@ -9,7 +9,20 @@ const (
 )
 
 var (
-	SKU_STATUS_IN_STOCK  = []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 20, 21, 22, 23, 26, 27, 28, 29, 30, 33}
-	SKU_STATUS_COMMITTED = []int{7, 9, 11, 12}
-	SKU_STATUS_RECEIVING = []int{2, 26, 33}
+	SKU_STATUS_IN_STOCK   = []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 14, 15, 16, 17, 20, 21, 22, 23, 26, 27, 28, 29, 30, 33}
+	SKU_STATUS_COMMITTED  = []int{7, 9, 11, 12}
+	SKU_STATUS_RECEIVING  = []int{2, 26, 33}
+	SKU_STATUS_IN_COMMING = []int{1}
+	SKU_STATUS_AVAILABLE  = []int{6}
+	SKU_STATUS_TEST       = []int{6}
+	SKU_STATUS_PICK_ORDER = []int{7, 8, 9}
+	SKU_STATUS_PACK_ORDER = []int{10, 11}
+	SKU_STATUS_PICK_IT    = []int{20, 21}
+	SKU_STATUS_PACK_IT    = []int{22, 23}
+)
+
+var (
+	PRODUCT_STATUS_UP        = []int{5, 6, 7, 8}
+	PRODUCT_STATUS_AVAILABLE = []int{1, 5, 8}
+	PRODUCT_STATUS_TEST      = []int{7}
 )

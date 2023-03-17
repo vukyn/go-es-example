@@ -12,11 +12,12 @@ type EsIndice struct {
 }
 
 type SkuCount struct {
-	Sku         float64 `json:"sku"`
-	Count       float64 `json:"count"`
-	ProductId   float64 `json:"product_id"`
-	WarehouseId float64 `json:"warehouse_id"`
-	BrandId     float64 `json:"brand_id"`
+	Sku           float64 `json:"sku"`
+	Count         float64 `json:"count"`
+	ProductId     float64 `json:"product_id"`
+	WarehouseId   float64 `json:"warehouse_id"`
+	BrandId       float64 `json:"brand_id"`
+	InboundShmtId float64 `json:"inbound_shmt_id"`
 }
 
 type Product struct {
@@ -24,33 +25,44 @@ type Product struct {
 	Barcode     string  `json:"barcode"`
 	Type        float64 `json:"type"`
 	ProductName string  `json:"product_name"`
+	BrandId     float64 `json:"brand_id"`
+}
+
+type ReportStockRequest struct {
+	WarehouseId int64  `json:"warehouse_id"`
+	Sku         string `json:"sku"`
+	Type        int32  `json:"type"`
+	BrandIds    string `json:"brand_ids"`
+	PageSize    int64  `json:"page_size"`
+	PageNumber  int64  `json:"page_number"`
 }
 
 type ReportStock struct {
 	Sku     float64 `json:"sku"`
 	Barcode string  `json:"barcode"`
 	// Category          string `json:"category"`
-	// BrandId int64 `json:"brand_id"`
+	BrandId int64 `json:"brand_id"`
 	// BrandName string `json:"brand_name"`
 	WarehouseId int64 `json:"warehouse_id"`
 	// WarehouseName     string `json:"warehouse_name"`
-	Type int32 `json:"type"`
-	// ProductId int64 `json:"product_id"`
-	ProductName string `json:"product_name"`
-	InStock     int64  `json:"in_stock"`
-	Committed   int64  `json:"committed"`
-	// Available         int64  `json:"available"`
-	// InComming         int64  `json:"in_comming"`
-	Receving int64 `json:"receving"`
-	// PickOrder         int64  `json:"pick_order"`
-	// PackOrder         int64  `json:"pack_order"`
-	// PickIT            int64  `json:"pick_it"`
-	// PackIT            int64  `json:"pack_it"`
-	Test int64 `json:"test"`
-	// UnsuitableProduct int64  `json:"unsuitable_product"`
+	Type              int32  `json:"type"`
+	ProductName       string `json:"product_name"`
+	InStock           int64  `json:"in_stock"`
+	Committed         int64  `json:"committed"`
+	Available         int64  `json:"available"`
+	InComming         int64  `json:"in_comming"`
+	Receving          int64  `json:"receving"`
+	PickOrder         int64  `json:"pick_order"`
+	PackOrder         int64  `json:"pack_order"`
+	PickIT            int64  `json:"pick_it"`
+	PackIT            int64  `json:"pack_it"`
+	Test              int64  `json:"test"`
+	UnsuitableProduct int64  `json:"unsuitable_product"`
 }
 
 type ReportStockResponse struct {
+	Count  int64          `json:"count"`
+	Page   int64          `json:"page"`
 	Size   int64          `json:"size"`
 	Record []*ReportStock `json:"record"`
 }
@@ -81,6 +93,7 @@ func FromElasticSearchResponseToListProduct(in []interface{}) []*Product {
 			Barcode:     product["product_barcode"].(string),
 			Type:        product["product_type"].(float64),
 			ProductName: product["product_name"].(string),
+			BrandId:     product["product_brand_id"].(float64),
 		})
 	}
 	return res
